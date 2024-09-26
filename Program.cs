@@ -1,4 +1,5 @@
 using ApiCatalog.Data;
+using ApiCatalog.Logging;
 using ApiCatalog.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
@@ -6,15 +7,17 @@ using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 
 var mySqlConnection = builder.Configuration.GetConnectionString("MySqlConnection");
-
-builder.Services.AddDbContext<AppDbContext>(options => options.UseMySql(mySqlConnection, ServerVersion.AutoDetect(mySqlConnection)));
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseMySql(mySqlConnection, ServerVersion.AutoDetect(mySqlConnection)));
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddControllers().AddJsonOptions(options =>
-    options.JsonSerializerOptions
-    .ReferenceHandler = ReferenceHandler.IgnoreCycles);
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 builder.Services.AddScoped<SeedingDbService>();
+builder.Services.AddScoped<LoggingFilter>();
+
+builder.Logging.AddProvider(new LoggingProvider(new LoggingConfiguration { LogLevel = LogLevel.Warning}));
 
 var app = builder.Build();
 

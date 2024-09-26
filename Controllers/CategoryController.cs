@@ -1,5 +1,6 @@
 ﻿using ApiCatalog.Data;
 using ApiCatalog.Models;
+using ApiCatalog.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,14 +18,23 @@ public class CategoryController : Controller
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Category>> Get()
+    [ServiceFilter(typeof(LoggingFilter))]
+    public async Task< ActionResult<IEnumerable<Category>>> Get()
     {
-        var categories = _context.Categories.AsNoTracking().Take(10).ToList();
-        if (categories is null)
+        try
         {
-            return NotFound();
+            var categories = _context.Categories.AsNoTracking().Take(10).ToListAsync();
+            if (categories is null)
+            {
+                return NotFound();
+            }
+            return await categories;
+
         }
-        return categories;
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error to access db.");
+        }
     }
 
     [HttpGet("{id:int}", Name = "GetCategory")]
