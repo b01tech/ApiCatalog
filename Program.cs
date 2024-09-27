@@ -1,5 +1,7 @@
 using ApiCatalog.Data;
 using ApiCatalog.Logging;
+using ApiCatalog.Repositories;
+using ApiCatalog.Repositories.Interfaces;
 using ApiCatalog.Services;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
@@ -16,6 +18,9 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 builder.Services.AddScoped<SeedingDbService>();
 builder.Services.AddScoped<LoggingFilter>();
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 builder.Logging.AddProvider(new LoggingProvider(new LoggingConfiguration { LogLevel = LogLevel.Warning}));
 

@@ -1,7 +1,6 @@
-﻿using ApiCatalog.Data;
-using ApiCatalog.Models;
+﻿using ApiCatalog.Models;
+using ApiCatalog.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace ApiCatalog.Controllers;
 
@@ -9,71 +8,106 @@ namespace ApiCatalog.Controllers;
 [Route("[controller]")]
 public class ProductController : Controller
 {
-    private readonly AppDbContext _context;
+    private readonly IProductRepository _repository;
 
-    public ProductController(AppDbContext context)
+    public ProductController(IProductRepository repository)
     {
-        _context = context;
+        _repository = repository;
     }
 
     [HttpGet]
     public ActionResult<IEnumerable<Product>> Get()
     {
-        var products = _context.Products.AsNoTracking().Take(10).ToList();
-        if (products is null)
+        var products = _repository.GetAll();
+        if (products == null || !products.Any())
         {
             return NotFound("Products not found!");
         }
-        return products;
+        return Ok(products);
     }
 
     [HttpGet("{id:int}", Name = "GetProduct")]
-
     public ActionResult<Product> GetById(int id)
     {
-        var product = _context.Products.AsNoTracking().FirstOrDefault(p => p.ProductId == id);
+        var product = _repository.Get(p => p.ProductId == id);
         if (product == null)
         {
             return NotFound($"Product id {id} not found!");
         }
-        return product;
+        return Ok(product);
+    }
+
+    [HttpGet("Category/{categoryId:int}")]
+    public ActionResult<IEnumerable<Product>> GetByCategory(int categoryId)
+    {
+        var products = _repository.GetByCategory(categoryId);
+        if (products == null || !products.Any())
+        {
+            return NotFound($"No products in category {categoryId}");
+        }
+        return Ok(products);
     }
 
     [HttpPost]
-    public ActionResult Post(Product product)
+    public ActionResult Post([FromBody] Product product)
     {
-        if (product is null)
+        if (product == null)
         {
-            return BadRequest();
+            return BadRequest("Product is null.");
         }
-        _context.Products.Add(product);
-        _context.SaveChanges();
-        return new CreatedAtRouteResult("GetProduct", new { id = product.ProductId }, product);
 
+        try
+        {
+            _repository.Create(product);
+            return CreatedAtRoute("GetProduct", new { id = product.ProductId }, product);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, $"Error creating product: {ex.Message}");
+        }
     }
+
     [HttpPut("{id:int}")]
-    public ActionResult Put(int id, Product product)
+    public ActionResult Put(int id, [FromBody] Product product)
     {
+        if (product == null)
+        {
+            return BadRequest("Product is null.");
+        }
+
         if (id != product.ProductId)
         {
-            return BadRequest();
+            return BadRequest("Product ID mismatch.");
         }
-        _context.Entry(product).State = EntityState.Modified;
-        _context.Products.Update(product);
-        _context.SaveChanges();
-        return Ok(product);
+
+        try
+        {
+            _repository.Update(product);
+            return Ok(product);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, $"Error updating product: {ex.Message}");
+        }
     }
 
     [HttpDelete("{id:int}")]
     public ActionResult Delete(int id)
     {
-        var product = _context.Products.FirstOrDefault(p => (p.ProductId == id));
-        if (product is null)
+        var product = _repository.Get(p => p.ProductId == id);
+        if (product == null)
         {
-            return NotFound($"Product {id} not found");
+            return NotFound($"Product id {id} not found");
         }
-        _context.Products.Remove(product);
-        _context.SaveChanges();
-        return Ok(product);
+
+        try
+        {
+            _repository.Delete(product);
+            return Ok(product);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, $"Error deleting product: {ex.Message}");
+        }
     }
 }
