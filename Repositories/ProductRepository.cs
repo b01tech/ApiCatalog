@@ -13,6 +13,6 @@ public class ProductRepository : Repository<Product>, IProductRepository
 
     public IEnumerable<Product> GetByCategory(int id)
     {
-        return GetAll().Where(c => c.CategoryId == id);
+        return GetAll().Take(10).Where(c => c.CategoryId == id);
     }
 }

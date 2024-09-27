@@ -9,11 +9,11 @@ namespace ApiCatalog.Controllers;
 [Route("[controller]")]
 public class CategoryController : Controller
 {
-    private readonly ICategoryRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public CategoryController(ICategoryRepository repository)
+    public CategoryController(IUnitOfWork unitOfWork)
     {
-        _repository = repository;
+        _unitOfWork = unitOfWork;
     }
 
     [HttpGet]
@@ -22,7 +22,7 @@ public class CategoryController : Controller
     {
         try
         {
-            var categories = _repository.GetAll();
+            var categories = _unitOfWork.categoryRepository.GetAll();
             return Ok(categories);
         }
         catch (Exception ex)
@@ -38,7 +38,7 @@ public class CategoryController : Controller
     [HttpGet("{id:int}", Name = "GetCategory")]
     public ActionResult<Category> GetById(int id)
     {
-        var category = _repository.Get(c => c.CategoryId == id);
+        var category = _unitOfWork.categoryRepository.Get(c => c.CategoryId == id);
         if (category == null)
         {
             return NotFound();
@@ -52,7 +52,8 @@ public class CategoryController : Controller
         if (category == null)
             return BadRequest("Category is null");
 
-        _repository.Create(category);
+        _unitOfWork.categoryRepository.Create(category);
+        _unitOfWork.Commit();
         return CreatedAtRoute("GetCategory", new { id = category.CategoryId }, category);
     }
 
@@ -66,17 +67,19 @@ public class CategoryController : Controller
         {
             return BadRequest("Id mismatch");
         }
-        _repository.Update(category);
+        _unitOfWork.categoryRepository.Update(category);
+        _unitOfWork.Commit();
         return Ok(category);
     }
 
     [HttpDelete("{id:int}")]
     public ActionResult Delete(int id)
     {
-        var category = _repository.Get(c => c.CategoryId == id);
+        var category = _unitOfWork.categoryRepository.Get(c => c.CategoryId == id);
         if (category == null)
             return NotFound($"Category {id} not found.");
-        _repository.Delete(category);
+        _unitOfWork.categoryRepository.Delete(category);
+        _unitOfWork.Commit();
         return Ok(category);
     }
 }

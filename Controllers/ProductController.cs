@@ -8,17 +8,17 @@ namespace ApiCatalog.Controllers;
 [Route("[controller]")]
 public class ProductController : Controller
 {
-    private readonly IProductRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public ProductController(IProductRepository repository)
+    public ProductController(IUnitOfWork unitOfWork)
     {
-        _repository = repository;
+        _unitOfWork = unitOfWork;
     }
 
     [HttpGet]
     public ActionResult<IEnumerable<Product>> Get()
     {
-        var products = _repository.GetAll();
+        var products = _unitOfWork.productRepository.GetAll();
         if (products == null || !products.Any())
         {
             return NotFound("Products not found!");
@@ -29,7 +29,7 @@ public class ProductController : Controller
     [HttpGet("{id:int}", Name = "GetProduct")]
     public ActionResult<Product> GetById(int id)
     {
-        var product = _repository.Get(p => p.ProductId == id);
+        var product = _unitOfWork.productRepository.Get(p => p.ProductId == id);
         if (product == null)
         {
             return NotFound($"Product id {id} not found!");
@@ -40,7 +40,7 @@ public class ProductController : Controller
     [HttpGet("Category/{categoryId:int}")]
     public ActionResult<IEnumerable<Product>> GetByCategory(int categoryId)
     {
-        var products = _repository.GetByCategory(categoryId);
+        var products = _unitOfWork.productRepository.GetByCategory(categoryId);
         if (products == null || !products.Any())
         {
             return NotFound($"No products in category {categoryId}");
@@ -58,7 +58,8 @@ public class ProductController : Controller
 
         try
         {
-            _repository.Create(product);
+            _unitOfWork.productRepository.Create(product);
+            _unitOfWork.Commit();
             return CreatedAtRoute("GetProduct", new { id = product.ProductId }, product);
         }
         catch (Exception ex)
@@ -82,7 +83,8 @@ public class ProductController : Controller
 
         try
         {
-            _repository.Update(product);
+            _unitOfWork.productRepository.Update(product);
+            _unitOfWork.Commit();
             return Ok(product);
         }
         catch (Exception ex)
@@ -94,7 +96,7 @@ public class ProductController : Controller
     [HttpDelete("{id:int}")]
     public ActionResult Delete(int id)
     {
-        var product = _repository.Get(p => p.ProductId == id);
+        var product = _unitOfWork.productRepository.Get(p => p.ProductId == id);
         if (product == null)
         {
             return NotFound($"Product id {id} not found");
@@ -102,7 +104,8 @@ public class ProductController : Controller
 
         try
         {
-            _repository.Delete(product);
+            _unitOfWork.productRepository.Delete(product);
+            _unitOfWork.Commit();
             return Ok(product);
         }
         catch (Exception ex)
