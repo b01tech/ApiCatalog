@@ -1,5 +1,7 @@
-﻿using ApiCatalog.Models;
+﻿using ApiCatalog.DTOs;
+using ApiCatalog.Models;
 using ApiCatalog.Repositories.Interfaces;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ApiCatalog.Controllers;
@@ -9,58 +11,64 @@ namespace ApiCatalog.Controllers;
 public class ProductController : Controller
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMapper _mapper;
 
-    public ProductController(IUnitOfWork unitOfWork)
+    public ProductController(IUnitOfWork unitOfWork, IMapper mapper)
     {
         _unitOfWork = unitOfWork;
+        _mapper = mapper;
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Product>> Get()
+    public ActionResult<IEnumerable<ProductDTO>> Get()
     {
         var products = _unitOfWork.productRepository.GetAll();
         if (products == null || !products.Any())
         {
             return NotFound("Products not found!");
         }
-        return Ok(products);
+        var productDToList = _mapper.Map<ProductDTO>(products);
+        return Ok(productDToList);
     }
 
     [HttpGet("{id:int}", Name = "GetProduct")]
-    public ActionResult<Product> GetById(int id)
+    public ActionResult<ProductDTO> GetById(int id)
     {
         var product = _unitOfWork.productRepository.Get(p => p.ProductId == id);
         if (product == null)
         {
             return NotFound($"Product id {id} not found!");
         }
-        return Ok(product);
+        var productDto = _mapper.Map<Product>(product);
+        return Ok(productDto);
     }
 
     [HttpGet("Category/{categoryId:int}")]
-    public ActionResult<IEnumerable<Product>> GetByCategory(int categoryId)
+    public ActionResult<IEnumerable<ProductDTO>> GetByCategory(int categoryId)
     {
         var products = _unitOfWork.productRepository.GetByCategory(categoryId);
         if (products == null || !products.Any())
         {
             return NotFound($"No products in category {categoryId}");
         }
-        return Ok(products);
+        var productsDto = _mapper.Map<ProductDTO>(products);
+        return Ok(productsDto);
     }
 
     [HttpPost]
-    public ActionResult Post([FromBody] Product product)
+    public ActionResult Post([FromBody] ProductDTO productDto)
     {
-        if (product == null)
+        if (productDto == null)
         {
             return BadRequest("Product is null.");
         }
 
         try
         {
-            _unitOfWork.productRepository.Create(product);
+            var prod = _mapper.Map<Product>(productDto);
+            _unitOfWork.productRepository.Create(prod);
             _unitOfWork.Commit();
-            return CreatedAtRoute("GetProduct", new { id = product.ProductId }, product);
+            return CreatedAtRoute("GetProduct", new { id = prod.ProductId }, productDto);
         }
         catch (Exception ex)
         {
@@ -69,23 +77,24 @@ public class ProductController : Controller
     }
 
     [HttpPut("{id:int}")]
-    public ActionResult Put(int id, [FromBody] Product product)
+    public ActionResult Put(int id, [FromBody] ProductDTO productDto)
     {
-        if (product == null)
+        if (productDto == null)
         {
             return BadRequest("Product is null.");
         }
+        var prod = _mapper.Map<Product>(productDto);
 
-        if (id != product.ProductId)
+        if (id != prod.ProductId)
         {
             return BadRequest("Product ID mismatch.");
         }
 
         try
         {
-            _unitOfWork.productRepository.Update(product);
+            _unitOfWork.productRepository.Update(prod);
             _unitOfWork.Commit();
-            return Ok(product);
+            return Ok(productDto);
         }
         catch (Exception ex)
         {
@@ -106,7 +115,8 @@ public class ProductController : Controller
         {
             _unitOfWork.productRepository.Delete(product);
             _unitOfWork.Commit();
-            return Ok(product);
+            var productDto = _mapper.Map<ProductDTO>(product);
+            return Ok(productDto);
         }
         catch (Exception ex)
         {

@@ -1,6 +1,8 @@
-﻿using ApiCatalog.Models;
+﻿using ApiCatalog.DTOs;
+using ApiCatalog.Models;
 using ApiCatalog.Repositories.Interfaces;
 using ApiCatalog.Services;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ApiCatalog.Controllers;
@@ -10,20 +12,23 @@ namespace ApiCatalog.Controllers;
 public class CategoryController : Controller
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IMapper _mapper;
 
-    public CategoryController(IUnitOfWork unitOfWork)
+    public CategoryController(IUnitOfWork unitOfWork, IMapper mapper)
     {
         _unitOfWork = unitOfWork;
+        _mapper = mapper;
     }
 
     [HttpGet]
     [ServiceFilter(typeof(LoggingFilter))]
-    public ActionResult<IEnumerable<Category>> GetAll()
+    public ActionResult<IEnumerable<CategoryDTO>> GetAll()
     {
         try
         {
             var categories = _unitOfWork.categoryRepository.GetAll();
-            return Ok(categories);
+            var categoriesDto = _mapper.Map<IEnumerable<CategoryDTO>>(categories);
+            return Ok(categoriesDto);
         }
         catch (Exception ex)
         {
@@ -36,40 +41,47 @@ public class CategoryController : Controller
     }
 
     [HttpGet("{id:int}", Name = "GetCategory")]
-    public ActionResult<Category> GetById(int id)
+    public ActionResult<CategoryDTO> GetById(int id)
     {
         var category = _unitOfWork.categoryRepository.Get(c => c.CategoryId == id);
         if (category == null)
         {
             return NotFound();
         }
-        return category;
+        var categoryDto = _mapper.Map<CategoryDTO>(category);
+        return categoryDto;
     }
 
     [HttpPost]
-    public ActionResult Post([FromBody] Category category)
+    public ActionResult Post([FromBody] CategoryDTO categoryDto)
     {
-        if (category == null)
+        if (categoryDto == null)
             return BadRequest("Category is null");
 
-        _unitOfWork.categoryRepository.Create(category);
+        var category = _mapper.Map<Category>(categoryDto);
+        var newCategory = _unitOfWork.categoryRepository.Create(category);
         _unitOfWork.Commit();
-        return CreatedAtRoute("GetCategory", new { id = category.CategoryId }, category);
+        var newCategoryDto = _mapper.Map<CategoryDTO>(newCategory);
+        return CreatedAtRoute("GetCategory", new { id = category.CategoryId }, newCategoryDto);
     }
 
     [HttpPut("{id:int}")]
-    public ActionResult Put(int id, [FromBody] Category category)
+    public ActionResult Put(int id, [FromBody] CategoryDTO categoryDto)
     {
-        if (category == null)
+        if (categoryDto == null)
             return BadRequest("Category is null");
+
+        var category = _mapper.Map<Category>(categoryDto);
 
         if (id != category.CategoryId)
         {
             return BadRequest("Id mismatch");
         }
-        _unitOfWork.categoryRepository.Update(category);
+        var newCategory = _unitOfWork.categoryRepository.Update(category);
         _unitOfWork.Commit();
-        return Ok(category);
+
+        var newCategoryDto = _mapper.Map<CategoryDTO>(newCategory);
+        return Ok(newCategoryDto);
     }
 
     [HttpDelete("{id:int}")]
@@ -78,8 +90,9 @@ public class CategoryController : Controller
         var category = _unitOfWork.categoryRepository.Get(c => c.CategoryId == id);
         if (category == null)
             return NotFound($"Category {id} not found.");
+        var categoryDto = _mapper.Map<CategoryDTO>(category);
         _unitOfWork.categoryRepository.Delete(category);
         _unitOfWork.Commit();
-        return Ok(category);
+        return Ok(categoryDto);
     }
 }

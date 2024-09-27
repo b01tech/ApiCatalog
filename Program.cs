@@ -1,4 +1,5 @@
 using ApiCatalog.Data;
+using ApiCatalog.DTOs.Mapping;
 using ApiCatalog.Logging;
 using ApiCatalog.Repositories;
 using ApiCatalog.Repositories.Interfaces;
@@ -22,6 +23,8 @@ builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 builder.Logging.AddProvider(new LoggingProvider(new LoggingConfiguration { LogLevel = LogLevel.Warning}));
 
