@@ -1,5 +1,6 @@
 ﻿using ApiCatalog.Data;
 using ApiCatalog.Models;
+using ApiCatalog.Pagination;
 using ApiCatalog.Repositories.Interfaces;
 
 namespace ApiCatalog.Repositories;
@@ -11,8 +12,11 @@ public class ProductRepository : Repository<Product>, IProductRepository
     {
     }
 
-    public IEnumerable<Product> GetByCategory(int id)
+    public PageList<Product> GetByCategory(int id, PageParameter pageParams)
     {
-        return GetAll().Take(10).Where(c => c.CategoryId == id);
+        var products = GetAll().Where(p => p.CategoryId == id).AsQueryable();
+        var prodPaged = PageList<Product>.ToPageList(products, pageParams.PageSize, pageParams.PageNumber);
+        return prodPaged;       
     }
+
 }

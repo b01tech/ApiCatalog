@@ -57,9 +57,9 @@ public class ProductController : Controller
     }
 
     [HttpGet("Category/{categoryId:int}")]
-    public ActionResult<IEnumerable<ProductDTO>> GetByCategory(int categoryId)
+    public ActionResult<IEnumerable<ProductDTO>> GetByCategory([FromQuery] PageParameter pageParams, int categoryId)
     {
-        var products = _unitOfWork.productRepository.GetByCategory(categoryId);
+        var products = _unitOfWork.productRepository.GetByCategory(categoryId, pageParams);
         if (products == null || !products.Any())
         {
             return NotFound($"No products in category {categoryId}");

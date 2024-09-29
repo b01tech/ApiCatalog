@@ -1,8 +1,9 @@
 ﻿using ApiCatalog.Models;
+using ApiCatalog.Pagination;
 
 namespace ApiCatalog.Repositories.Interfaces;
 
 public interface IProductRepository : IRepository<Product>
 {
-    IEnumerable<Product> GetByCategory(int id);
+    PageList<Product> GetByCategory(int id, PageParameter pageParams);
 }
