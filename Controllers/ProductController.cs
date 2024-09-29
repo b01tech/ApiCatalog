@@ -1,8 +1,10 @@
 ﻿using ApiCatalog.DTOs;
 using ApiCatalog.Models;
+using ApiCatalog.Pagination;
 using ApiCatalog.Repositories.Interfaces;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 
 namespace ApiCatalog.Controllers;
 
@@ -20,15 +22,26 @@ public class ProductController : Controller
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<ProductDTO>> Get()
+    public ActionResult<IEnumerable<ProductDTO>> Get([FromQuery]PageParameter pageParams)
     {
-        var products = _unitOfWork.productRepository.GetAll();
-        if (products == null || !products.Any())
+        var products = _unitOfWork.productRepository.GetList(pageParams);
+
+        var metadata = new
         {
-            return NotFound("Products not found!");
-        }
-        var productDToList = _mapper.Map<ProductDTO>(products);
-        return Ok(productDToList);
+            products.TotalCount,
+            products.PageSize,
+            products.CurrentPage,
+            products.TotalPages,
+            products.HasNext,
+            products.HasPrevious,
+        };
+
+        Response.Headers.Append("x-pagination", JsonConvert.SerializeObject(metadata));
+
+        if (!products.Any()) 
+            return NotFound("No products found.");
+        var productsDto = _mapper.Map<IEnumerable<ProductDTO>>(products);
+        return Ok(productsDto);
     }
 
     [HttpGet("{id:int}", Name = "GetProduct")]
@@ -51,7 +64,7 @@ public class ProductController : Controller
         {
             return NotFound($"No products in category {categoryId}");
         }
-        var productsDto = _mapper.Map<ProductDTO>(products);
+        var productsDto = _mapper.Map<IEnumerable<ProductDTO>>(products);
         return Ok(productsDto);
     }
 

@@ -4,7 +4,7 @@ using ApiCatalog.Repositories.Interfaces;
 
 namespace ApiCatalog.Repositories;
 
-public class CategoryRepository : Repository<Category>, ICategoryRepository
+public class CategoryRepository : Repository<CategoryDto>, ICategoryRepository
 {
     public CategoryRepository(AppDbContext context) : base(context)
     {

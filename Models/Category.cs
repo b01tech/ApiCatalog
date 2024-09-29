@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace ApiCatalog.Models;
 
-public class Category
+public class CategoryDto
 {
     [Key]
     public int CategoryId { get; set; }
@@ -15,7 +15,7 @@ public class Category
     [JsonIgnore]
     public ICollection<Product>? Products { get; set; }
 
-    public Category()
+    public CategoryDto()
     {
         Products = new List<Product>();
     }

@@ -1,4 +1,5 @@
 ﻿using ApiCatalog.Data;
+using ApiCatalog.Pagination;
 using ApiCatalog.Repositories.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
@@ -14,9 +15,16 @@ public class Repository<T> : IRepository<T> where T : class
         _context = context;
     }
 
+    public PageList<T> GetList(PageParameter pageParams)
+    {
+        var items = GetAll().AsQueryable();
+        var itemsPaged = PageList<T>.ToPageList(items, pageParams.PageSize, pageParams.PageNumber);
+        return itemsPaged;
+    }
+
     public IEnumerable<T> GetAll()
     {
-       return _context.Set<T>().AsNoTracking().Take(10).ToList();
+       return _context.Set<T>().AsNoTracking().ToList();
     }
     public T? Get(Expression<Func<T, bool>> expression)
     {

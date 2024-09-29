@@ -1,9 +1,11 @@
 ﻿using ApiCatalog.DTOs;
 using ApiCatalog.Models;
+using ApiCatalog.Pagination;
 using ApiCatalog.Repositories.Interfaces;
 using ApiCatalog.Services;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 
 namespace ApiCatalog.Controllers;
 
@@ -22,11 +24,24 @@ public class CategoryController : Controller
 
     [HttpGet]
     [ServiceFilter(typeof(LoggingFilter))]
-    public ActionResult<IEnumerable<CategoryDTO>> GetAll()
+    public ActionResult<IEnumerable<CategoryDTO>> GetAll([FromQuery] PageParameter pageParams)
     {
         try
         {
-            var categories = _unitOfWork.categoryRepository.GetAll();
+            var categories = _unitOfWork.categoryRepository.GetList(pageParams);
+
+            var metadata = new
+            {
+                categories.TotalCount,
+                categories.PageSize,
+                categories.CurrentPage,
+                categories.TotalPages,
+                categories.HasNext,
+                categories.HasPrevious
+            };
+
+            Response.Headers.Append("x-pagination", JsonConvert.SerializeObject(metadata));
+
             var categoriesDto = _mapper.Map<IEnumerable<CategoryDTO>>(categories);
             return Ok(categoriesDto);
         }
@@ -58,7 +73,7 @@ public class CategoryController : Controller
         if (categoryDto == null)
             return BadRequest("Category is null");
 
-        var category = _mapper.Map<Category>(categoryDto);
+        var category = _mapper.Map<CategoryDto>(categoryDto);
         var newCategory = _unitOfWork.categoryRepository.Create(category);
         _unitOfWork.Commit();
         var newCategoryDto = _mapper.Map<CategoryDTO>(newCategory);
@@ -71,7 +86,7 @@ public class CategoryController : Controller
         if (categoryDto == null)
             return BadRequest("Category is null");
 
-        var category = _mapper.Map<Category>(categoryDto);
+        var category = _mapper.Map<CategoryDto>(categoryDto);
 
         if (id != category.CategoryId)
         {
