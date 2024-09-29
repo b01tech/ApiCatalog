@@ -1,7 +1,8 @@
-﻿using ApiCatalog.Data;
+﻿using ApiCatalog.DTOs;
 using ApiCatalog.Models;
+using ApiCatalog.Repositories.Interfaces;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace ApiCatalog.Controllers;
 
@@ -9,71 +10,117 @@ namespace ApiCatalog.Controllers;
 [Route("[controller]")]
 public class ProductController : Controller
 {
-    private readonly AppDbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IMapper _mapper;
 
-    public ProductController(AppDbContext context)
+    public ProductController(IUnitOfWork unitOfWork, IMapper mapper)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
+        _mapper = mapper;
     }
 
     [HttpGet]
-    public ActionResult<IEnumerable<Product>> Get()
+    public ActionResult<IEnumerable<ProductDTO>> Get()
     {
-        var products = _context.Products.ToList();
-        if (products is null)
+        var products = _unitOfWork.productRepository.GetAll();
+        if (products == null || !products.Any())
         {
             return NotFound("Products not found!");
         }
-        return products;
+        var productDToList = _mapper.Map<ProductDTO>(products);
+        return Ok(productDToList);
     }
 
     [HttpGet("{id:int}", Name = "GetProduct")]
-
-    public ActionResult<Product> GetById(int id)
+    public ActionResult<ProductDTO> GetById(int id)
     {
-        var product = _context.Products.FirstOrDefault(p => p.ProductId == id);
+        var product = _unitOfWork.productRepository.Get(p => p.ProductId == id);
         if (product == null)
         {
             return NotFound($"Product id {id} not found!");
         }
-        return product;
+        var productDto = _mapper.Map<Product>(product);
+        return Ok(productDto);
+    }
+
+    [HttpGet("Category/{categoryId:int}")]
+    public ActionResult<IEnumerable<ProductDTO>> GetByCategory(int categoryId)
+    {
+        var products = _unitOfWork.productRepository.GetByCategory(categoryId);
+        if (products == null || !products.Any())
+        {
+            return NotFound($"No products in category {categoryId}");
+        }
+        var productsDto = _mapper.Map<ProductDTO>(products);
+        return Ok(productsDto);
     }
 
     [HttpPost]
-    public ActionResult Post(Product product)
+    public ActionResult Post([FromBody] ProductDTO productDto)
     {
-        if (product is null)
+        if (productDto == null)
         {
-            return BadRequest();
+            return BadRequest("Product is null.");
         }
-        _context.Products.Add(product);
-        _context.SaveChanges();
-        return new CreatedAtRouteResult("GetProduct", new { id = product.ProductId }, product);
 
-    }
-    [HttpPut("{id:int}")]
-    public ActionResult Put(int id, Product product)
-    {
-        if (id != product.ProductId)
+        try
         {
-            return BadRequest();
+            var prod = _mapper.Map<Product>(productDto);
+            _unitOfWork.productRepository.Create(prod);
+            _unitOfWork.Commit();
+            return CreatedAtRoute("GetProduct", new { id = prod.ProductId }, productDto);
         }
-        _context.Entry(product).State = EntityState.Modified;
-        _context.Products.Update(product);
-        _context.SaveChanges();
-        return Ok(product);
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, $"Error creating product: {ex.Message}");
+        }
+    }
+
+    [HttpPut("{id:int}")]
+    public ActionResult Put(int id, [FromBody] ProductDTO productDto)
+    {
+        if (productDto == null)
+        {
+            return BadRequest("Product is null.");
+        }
+        var prod = _mapper.Map<Product>(productDto);
+
+        if (id != prod.ProductId)
+        {
+            return BadRequest("Product ID mismatch.");
+        }
+
+        try
+        {
+            _unitOfWork.productRepository.Update(prod);
+            _unitOfWork.Commit();
+            return Ok(productDto);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, $"Error updating product: {ex.Message}");
+        }
     }
 
     [HttpDelete("{id:int}")]
     public ActionResult Delete(int id)
     {
-        var product = _context.Products.FirstOrDefault(p => (p.ProductId == id));
-        if (product is null)
+        var product = _unitOfWork.productRepository.Get(p => p.ProductId == id);
+        if (product == null)
         {
-            return NotFound($"Product {id} not found");
+            return NotFound($"Product id {id} not found");
         }
-        _context.Products.Remove(product);
-        _context.SaveChanges();
-        return Ok(product);
+
+        try
+        {
+            _unitOfWork.productRepository.Delete(product);
+            _unitOfWork.Commit();
+            var productDto = _mapper.Map<ProductDTO>(product);
+            return Ok(productDto);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, $"Error deleting product: {ex.Message}");
+        }
     }
 }

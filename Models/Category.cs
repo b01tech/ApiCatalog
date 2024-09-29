@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace ApiCatalog.Models;
 
@@ -11,6 +12,7 @@ public class Category
     public string? Name { get; set; }
     [StringLength(300)]
     public string? ImageUrl { get; set; }
+    [JsonIgnore]
     public ICollection<Product>? Products { get; set; }
 
     public Category()
